@@ -9,19 +9,16 @@ fn main {
 async fn cat(files : ArrayView[String]) -> Unit! {
   if files is [] {
     // read from stdin only once
-    let input = @async.stdin.read_text(encoding=UTF8)
-    @async.stdout.write_text(input, encoding=UTF8)
+    read_streaming(@async.stdin)
   } else {
     for file in files {
       try {
         if file is "-" {
           // read from stdin
-          let input = @async.stdin.read_text(encoding=UTF8)
-          @async.stdout.write_text(input, encoding=UTF8)
+          read_streaming(@async.stdin)
           continue
         } else {
-          let content = @async.path(file).read_text(encoding=UTF8)
-          @async.stdout.write_text(content, encoding=UTF8)
+          read_all(@async.path(file))
         }
       } catch {
         e =>
@@ -32,4 +29,27 @@ async fn cat(files : ArrayView[String]) -> Unit! {
       }
     }
   }
+}
+
+///|
+async fn[T : @async.Readable] read_all(input : T) -> Unit! {
+  @async.stdout.write_text(input.read_text(encoding=UTF8), encoding=UTF8)
+}
+
+///|
+async fn[T : @async.Readable] read_streaming(input : T) -> Unit! {
+  let decoder = @encoding.decoder(UTF8)
+  let string = []
+  let stream = input.read()
+  stream.each(fn(bytes) {
+    let str = decoder.decode!(bytes, stream=true)
+    if str.find("\n") is Some(index) {
+      for i = 0; i < string.length(); i = i + 1 {
+        @async.stdout.write_text(string[i], encoding=UTF8)
+      }
+      @async.stdout.write_text(str.charcodes(end=index + 1), encoding=UTF8)
+      string.clear()
+      string.push(str.charcodes(start=index + 1))
+    }
+  })
 }
