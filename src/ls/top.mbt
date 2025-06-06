@@ -90,7 +90,7 @@ async fn File::from_path(path : &@async.ToPath, depth~ : UInt = 1) -> File! {
       // When depth is 0, still list direct entries but don't recurse
       path
       .iter()
-      .each(fn(entry) { 
+      .each(fn(entry) {
         if entry.is_dir() {
           entries.push(Directory(entry, []))
         } else {
@@ -107,44 +107,43 @@ async fn File::from_path(path : &@async.ToPath, depth~ : UInt = 1) -> File! {
 ///|
 async fn File::show(self : File) -> Unit! {
   match self {
-    File(path) => @async.stdout.write_text("\{path.name()}\n", encoding=UTF8)
+    File(path) => print("\{path.name()}\n")
     Directory(root, entries) => {
       let chalk = @chalk.chalk().color(Blue)
       let queue = @queue.new()
       for entry in entries {
         if entry is Directory(path, _) {
-          @async.stdout.write_text(
-            chalk.render("\{path.name()} "),
-            encoding=UTF8,
-          )
+          print(chalk.render("\{path.name()} "))
           queue.push(entry)
         } else if entry is File(path) {
-          @async.stdout.write_text("\{path.name()} ", encoding=UTF8)
+          print("\{path.name()} ")
         }
       }
-      @async.stdout.write_text("\n", encoding=UTF8)
+      print("\n")
       while queue.pop() is Some(f) {
         if f is File(path) {
-          @async.stdout.write_text(path.name(), encoding=UTF8)
+          print(path.name())
         } else if f is Directory(p, entries) {
           // Only show subdirectory contents if they have entries (i.e., depth > 0)
           if entries.length() > 0 {
-            @async.stdout.write_text("\n./\{p.relative_to(root)}:\n", encoding=UTF8)
+            print("\n./\{p.relative_to(root)}:\n")
             for entry in entries {
               if entry is Directory(path, _) {
-                @async.stdout.write_text(
-                  chalk.render("\{path.name()} "),
-                  encoding=UTF8,
-                )
+                print(chalk.render("\{path.name()} "))
                 queue.push(entry)
               } else if entry is File(path) {
-                @async.stdout.write_text("\{path.name()} ", encoding=UTF8)
+                print("\{path.name()} ")
               }
             }
-            @async.stdout.write_text("\n", encoding=UTF8)
+            print("\n")
           }
         }
       }
     }
   }
+}
+
+///|
+async fn print(s : String) -> Unit! {
+  @async.stdout.write_text(s, encoding=UTF8)
 }
