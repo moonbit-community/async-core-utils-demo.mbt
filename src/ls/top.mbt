@@ -54,7 +54,7 @@ fn main {
       }
       let dir = ls(
         path?=@env.current_dir(),
-        depth=if opt.recurse { opt.level } else { 1 },
+        depth=if opt.recurse { opt.level } else { 0 },
       )
       dir.show()
     }) catch {
@@ -86,6 +86,17 @@ async fn File::from_path(path : &@async.ToPath, depth~ : UInt = 1) -> File! {
       path
       .iter()
       .each(fn(entry) { entries.push(File::from_path(entry, depth=depth - 1)) })
+    } else {
+      // When depth is 0, still list direct entries but don't recurse
+      path
+      .iter()
+      .each(fn(entry) { 
+        if entry.is_dir() {
+          entries.push(Directory(entry, []))
+        } else {
+          entries.push(File(entry))
+        }
+      })
     }
     Directory(path, entries)
   } else {
@@ -111,25 +122,28 @@ async fn File::show(self : File) -> Unit! {
           @async.stdout.write_text("\{path.name()} ", encoding=UTF8)
         }
       }
-      @async.stdout.write_text("\n\n", encoding=UTF8)
+      @async.stdout.write_text("\n", encoding=UTF8)
       while queue.pop() is Some(f) {
         if f is File(path) {
           @async.stdout.write_text(path.name(), encoding=UTF8)
         } else if f is Directory(p, entries) {
-          @async.stdout.write_text("./\{p.relative_to(root)}:\n", encoding=UTF8)
-          for entry in entries {
-            if entry is Directory(path, _) {
-              @async.stdout.write_text(
-                chalk.render("\{path.name()} "),
-                encoding=UTF8,
-              )
-              queue.push(entry)
-            } else if entry is File(path) {
-              @async.stdout.write_text("\{path.name()} ", encoding=UTF8)
+          // Only show subdirectory contents if they have entries (i.e., depth > 0)
+          if entries.length() > 0 {
+            @async.stdout.write_text("\n./\{p.relative_to(root)}:\n", encoding=UTF8)
+            for entry in entries {
+              if entry is Directory(path, _) {
+                @async.stdout.write_text(
+                  chalk.render("\{path.name()} "),
+                  encoding=UTF8,
+                )
+                queue.push(entry)
+              } else if entry is File(path) {
+                @async.stdout.write_text("\{path.name()} ", encoding=UTF8)
+              }
             }
+            @async.stdout.write_text("\n", encoding=UTF8)
           }
         }
-        @async.stdout.write_text("\n\n", encoding=UTF8)
       }
     }
   }
