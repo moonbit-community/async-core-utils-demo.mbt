@@ -1,14 +1,14 @@
 ///|
 priv struct Option {
   mut recurse : Bool
-  mut level : UInt
+  mut level : UInt?
 } derive(Show)
 
 ///|
 impl @clap.Value for Option with add_value(self, name, value, positional) {
   if name is "level" && not(positional) {
     try {
-      self.level = @strconv.parse_uint(value)
+      self.level = Some(@strconv.parse_uint(value))
     } catch {
       e =>
         raise @clap.InvalidArgumentValue(
@@ -29,7 +29,7 @@ impl @clap.Value for Option with set_flag(self, name, value) {
 fn main {
   try
     @async.start(fn() {
-      let opt = { recurse: false, level: 1 }
+      let opt = { recurse: false, level: None }
       let parser = @clap.Parser::new(prog="ls", args={
         "recurse": @clap.Arg::flag(short='R', help="recurse into directories"),
         "level": @clap.Arg::named(
@@ -54,7 +54,7 @@ fn main {
       }
       let dir = ls(
         path?=@env.current_dir(),
-        depth=if opt.recurse { opt.level } else { 0 },
+        depth?=if opt.recurse { opt.level } else { Some(0) },
       )
       dir.show()
     }) catch {
@@ -69,24 +69,20 @@ enum File {
 }
 
 ///|
-async fn ls(path? : String, depth~ : UInt = 1) -> File! {
+async fn ls(path? : String, depth? : UInt) -> File! {
   let file = if path is Some(path) {
-    File::from_path(path, depth~)
+    File::from_path(path, depth?)
   } else {
-    File::from_path(@async.cwd(), depth~)
+    File::from_path(@async.cwd(), depth?)
   }
   file
 }
 
 ///|
-async fn File::from_path(path : &@async.ToPath, depth~ : UInt = 1) -> File! {
+async fn File::from_path(path : &@async.ToPath, depth? : UInt) -> File! {
   if path.is_dir() {
     let entries = []
-    if depth > 0 {
-      path
-      .iter()
-      .each(fn(entry) { entries.push(File::from_path(entry, depth=depth - 1)) })
-    } else {
+    if depth is Some(0) {
       // When depth is 0, still list direct entries but don't recurse
       path
       .iter()
@@ -96,6 +92,14 @@ async fn File::from_path(path : &@async.ToPath, depth~ : UInt = 1) -> File! {
         } else {
           entries.push(File(entry))
         }
+      })
+    } else {
+      path
+      .iter()
+      .each(fn(entry) {
+        entries.push(
+          File::from_path(entry, depth?=depth.map(UInt::op_sub(_, 1))),
+        )
       })
     }
     Directory(path, entries)
