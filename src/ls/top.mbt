@@ -56,7 +56,7 @@ fn main {
         path?=@env.current_dir(),
         depth?=if opt.recurse { opt.level } else { Some(0) },
       )
-      dir.show()
+      dir.display()
     }) catch {
     e => println("Error running cat: \{e}")
   }
@@ -109,7 +109,7 @@ async fn File::from_path(path : &@async.ToPath, depth? : UInt) -> File! {
 }
 
 ///|
-async fn File::show(self : File) -> Unit! {
+async fn File::display(self : File) -> Unit! {
   match self {
     File(path) => print("\{path.name()}\n")
     Directory(root, entries) => {
