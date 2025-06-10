@@ -12,20 +12,12 @@ async fn cat(files : ArrayView[String]) -> Unit! {
     read_streaming(@async.stdin)
   } else {
     for file in files {
-      try {
-        if file is "-" {
-          // read from stdin
-          read_streaming(@async.stdin)
-          continue
-        } else {
-          read_all(@async.path(file))
-        }
-      } catch {
-        e =>
-          @async.stderr.write_text(
-            "Error reading file \{file}: \{e}",
-            encoding=UTF8,
-          )
+      if file is "-" {
+        // read from stdin
+        read_streaming(@async.stdin)
+        continue
+      } else {
+        read_all(@async.path(file))
       }
     }
   }
