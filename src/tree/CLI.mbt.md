@@ -211,10 +211,10 @@ test "path" {
 中提供的各类函数，并定义递归函数进行处理。需要注意的是，需要对根结点的名称进行特殊处理。
 
 ```moonbit
-async fn TreeNode::new(option : TreeOptions) -> TreeNode! {
+async fn TreeNode::new(option : TreeOptions) -> TreeNode raise {
   let path = option.path as &@async.ToPath
-  guard path.is_dir() else { fail!("error opening dir \{path}") }
-  async fn aux!(p : &@async.ToPath, depth) {
+  guard path.is_dir() else { fail("error opening dir \{path}") }
+  async fn aux(p : &@async.ToPath, depth) raise {
     if option.max_depth is Some(max_depth) && max_depth == depth {
       TreeNode::{
         name: if depth == 0 {
@@ -260,7 +260,7 @@ async fn TreeNode::new(option : TreeOptions) -> TreeNode! {
 
 ```moonbit
 trait Output {
-  async print(Self, @string.View) -> Unit!
+  async print(Self, @string.View) -> Unit raise
 }
 
 /// 用于测试环境
@@ -283,7 +283,7 @@ impl Output for @async.File with print(self, text) {
 
 ```moonbit
 // 用于根节点的打印函数
-async fn[O : Output] TreeNode::print_root(node : TreeNode, output : O) -> Unit! {
+async fn[O : Output] TreeNode::print_root(node : TreeNode, output : O) -> Unit raise {
   output.print("\{node.name}\n")
   for i = 0; i < node.children.length(); i = i + 1 {
     let child = node.children[i]
@@ -298,7 +298,7 @@ async fn[O : Output] TreeNode::print(
   output : O,
   prefix : String,
   is_last : Bool
-) -> Unit! {
+) -> Unit raise {
   let connector = if is_last { "└── " } else { "├── " }
   output.print("\{prefix}\{connector}\{node.name}\n")
   let new_prefix = prefix + (if is_last { "    " } else { "│   " })
@@ -394,6 +394,8 @@ test {
         #|├── CLI.mbt.md
         #|└── moon.pkg.json
         #|
+
+
       ,
     )
   })

@@ -27,37 +27,36 @@ impl @clap.Value for Option with set_flag(self, name, value) {
 
 ///|
 fn main {
-  try
-    @async.start(fn() {
-      let opt = { recurse: false, level: None }
-      let parser = @clap.Parser::new(prog="ls", args={
-        "recurse": @clap.Arg::flag(short='R', help="recurse into directories"),
-        "level": @clap.Arg::named(
-          short='L',
-          help="limit the depth of recursion",
-          nargs=@clap.Nargs::AtMost(1),
-        ),
-      })
-      let help = try parser.parse(opt, @env.args()[1:]) catch {
-        InvalidArgumentValue(e) => {
-          @async.stderr.write_text("Error: \{e}\n", encoding=UTF8)
-          return
-        }
-        e => {
-          @async.stderr.write_text("Error: \{e}\n", encoding=UTF8)
-          return
-        }
-      }
-      if help is Some(help) {
-        @async.stdout.write_text(help, encoding=UTF8)
+  @async.start(fn() {
+    let opt = { recurse: false, level: None }
+    let parser = @clap.Parser::new(prog="ls", args={
+      "recurse": @clap.Arg::flag(short='R', help="recurse into directories"),
+      "level": @clap.Arg::named(
+        short='L',
+        help="limit the depth of recursion",
+        nargs=@clap.Nargs::AtMost(1),
+      ),
+    })
+    let help = parser.parse(opt, @env.args()[1:]) catch {
+      InvalidArgumentValue(e) => {
+        @async.stderr.write_text("Error: \{e}\n", encoding=UTF8)
         return
       }
-      let dir = ls(
-        path?=@env.current_dir(),
-        depth?=if opt.recurse { opt.level } else { Some(0) },
-      )
-      dir.display()
-    }) catch {
+      e => {
+        @async.stderr.write_text("Error: \{e}\n", encoding=UTF8)
+        return
+      }
+    }
+    if help is Some(help) {
+      @async.stdout.write_text(help, encoding=UTF8)
+      return
+    }
+    let dir = ls(
+      path?=@env.current_dir(),
+      depth?=if opt.recurse { opt.level } else { Some(0) },
+    )
+    dir.display()
+  }) catch {
     e => println("Error running cat: \{e}")
   }
 }
@@ -69,7 +68,7 @@ enum File {
 }
 
 ///|
-async fn ls(path? : String, depth? : UInt) -> File! {
+async fn ls(path? : String, depth? : UInt) -> File raise {
   let file = if path is Some(path) {
     File::from_path(path, depth?)
   } else {
@@ -79,7 +78,7 @@ async fn ls(path? : String, depth? : UInt) -> File! {
 }
 
 ///|
-async fn File::from_path(path : &@async.ToPath, depth? : UInt) -> File! {
+async fn File::from_path(path : &@async.ToPath, depth? : UInt) -> File raise {
   if path.is_dir() {
     let entries = []
     if depth is Some(0) {
@@ -109,7 +108,7 @@ async fn File::from_path(path : &@async.ToPath, depth? : UInt) -> File! {
 }
 
 ///|
-async fn File::display(self : File) -> Unit! {
+async fn File::display(self : File) -> Unit raise {
   match self {
     File(path) => print("\{path.name()}\n")
     Directory(root, entries) => {
@@ -148,6 +147,6 @@ async fn File::display(self : File) -> Unit! {
 }
 
 ///|
-async fn print(s : String) -> Unit! {
+async fn print(s : String) -> Unit raise {
   @async.stdout.write_text(s, encoding=UTF8)
 }

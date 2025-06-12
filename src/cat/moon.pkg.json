@@ -1,8 +1,7 @@
 {
   "import": [
     "tonyfettes/encoding",
-    "tonyfettes/uv/async",
-    "TheWaWaR/clap"
+    "tonyfettes/uv/async"
   ],
   "is-main": true
 }
