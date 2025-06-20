@@ -394,8 +394,6 @@ test {
         #|├── CLI.mbt.md
         #|└── moon.pkg.json
         #|
-
-
       ,
     )
   })
