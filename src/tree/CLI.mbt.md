@@ -79,14 +79,17 @@ top/
 
 定义用于表示目录树的数据结构：
 
-```moonbit
+```moonbit nocheck
 // 树节点结构
+///|
 struct TreeNode {
   name : String
   children : Array[TreeNode]
 }
 
 // 配置选项
+
+///|
 struct TreeOptions {
   mut path : String // 根路径
   mut show_hidden : Bool // 是否显示隐藏文件
@@ -94,6 +97,7 @@ struct TreeOptions {
   mut dirs_only : Bool // 仅显示目录
 } derive(Show)
 
+///|
 impl Default for TreeOptions with default() {
   { path: ".", show_hidden: false, max_depth: None, dirs_only: false }
 }
@@ -106,7 +110,8 @@ impl Default for TreeOptions with default() {
 来告诉它应当如何将解析的参数变为我们定义的选项。其中，`show_hidden` 与
 `dirs_only` 为开关标识，而 `max_depth` 则为具体的值。因此分别用两个方法来实现：
 
-```moonbit
+```moonbit nocheck
+///|
 impl @clap.Value for TreeOptions with add_value(self, name, value, positional) {
   if name is "level" && not(positional) {
     try {
@@ -123,6 +128,7 @@ impl @clap.Value for TreeOptions with add_value(self, name, value, positional) {
   }
 }
 
+///|
 impl @clap.Value for TreeOptions with set_flag(self, name, value) {
   if name is "all" {
     self.show_hidden = value
@@ -134,7 +140,8 @@ impl @clap.Value for TreeOptions with set_flag(self, name, value) {
 
 之后，我们需要定义一个解析器，在其中提供更详细的配置，包括每个指令的帮助信息：
 
-```moonbit
+```moonbit nocheck
+///|
 let parser : @clap.Parser = @clap.Parser::new(prog="tree", args={
   "all": @clap.Arg::flag(short='A', help="show hidden files"),
   "only-dirs": @clap.Arg::flag(short='D', help="list only directories"),
@@ -152,14 +159,15 @@ let parser : @clap.Parser = @clap.Parser::new(prog="tree", args={
 
 我们可以简单测试一下：
 
-```moonbit
+```moonbit nocheck
+///|
 test "help" {
   // 默认值
   let option = TreeOptions::default()
   guard parser.parse(option, ["-h"]) is Some(help_message)
   inspect(
     help_message,
-    content=
+    content=(
       #|Usage: tree [OPTIONS] [PATH]
       #|
       #|Arguments:
@@ -171,30 +179,32 @@ test "help" {
       #|  -L, --level <LEVEL>  limit the depth of recursion
       #|  -h, --help           Print help
       #|
-    ,
+    ),
   )
 }
 
+///|
 test "max depth" {
   // 默认值
   let option = TreeOptions::default()
   guard parser.parse(option, ["-L", "10"]) is None
   inspect(
     option,
-    content=
+    content=(
       #|{path: ".", show_hidden: false, max_depth: Some(10), dirs_only: false}
-    ,
+    ),
   )
 }
 
+///|
 test "path" {
   let option = TreeOptions::default()
   guard parser.parse(option, ["src/cat"]) is None
   inspect(
     option,
-    content=
+    content=(
       #|{path: "src/cat", show_hidden: false, max_depth: None, dirs_only: false}
-    ,
+    ),
   )
 }
 ```
@@ -210,11 +220,12 @@ test "path" {
 为此，我们需要使用 `@async`
 中提供的各类函数，并定义递归函数进行处理。需要注意的是，需要对根结点的名称进行特殊处理。
 
-```moonbit
-async fn TreeNode::new(option : TreeOptions) -> TreeNode raise {
+```moonbit nocheck
+///|
+async fn TreeNode::new(option : TreeOptions) -> TreeNode {
   let path = option.path as &@async.ToPath
   guard path.is_dir() else { fail("error opening dir \{path}") }
-  async fn aux(p : &@async.ToPath, depth) raise {
+  async fn aux(p : &@async.ToPath, depth) {
     if option.max_depth is Some(max_depth) && max_depth == depth {
       TreeNode::{
         name: if depth == 0 {
@@ -258,16 +269,19 @@ async fn TreeNode::new(option : TreeOptions) -> TreeNode raise {
 
 我们定义一个输出对象，方便调试:
 
-```moonbit
+```moonbit nocheck
+///|
 trait Output {
-  async print(Self, @string.View) -> Unit raise
+  async print(Self, @string.View) -> Unit
 }
 
+///|
 /// 用于测试环境
 impl Output for StringBuilder with print(self, text) {
   self.write_string(text.to_string())
 }
 
+///|
 /// 实际执行环境
 impl Output for @async.File with print(self, text) {
   self.write_text(text.to_string(), encoding=UTF8)
@@ -281,9 +295,10 @@ impl Output for @async.File with print(self, text) {
 - `│` 用于连接线
 - `` 用于空白缩进
 
-```moonbit
+```moonbit nocheck
 // 用于根节点的打印函数
-async fn[O : Output] TreeNode::print_root(node : TreeNode, output : O) -> Unit raise {
+///|
+async fn[O : Output] TreeNode::print_root(node : TreeNode, output : O) -> Unit {
   output.print("\{node.name}\n")
   for i = 0; i < node.children.length(); i = i + 1 {
     let child = node.children[i]
@@ -293,12 +308,14 @@ async fn[O : Output] TreeNode::print_root(node : TreeNode, output : O) -> Unit r
 }
 
 // 用于子节点的打印函数
+
+///|
 async fn[O : Output] TreeNode::print(
   node : TreeNode,
   output : O,
   prefix : String,
-  is_last : Bool
-) -> Unit raise {
+  is_last : Bool,
+) -> Unit {
   let connector = if is_last { "└── " } else { "├── " }
   output.print("\{prefix}\{connector}\{node.name}\n")
   let new_prefix = prefix + (if is_last { "    " } else { "│   " })
@@ -314,7 +331,8 @@ async fn[O : Output] TreeNode::print(
 
 为此，我们可以进行一些测试：
 
-```moonbit
+```moonbit nocheck
+///|
 test "single root node" {
   @async.start(fn() {
     let builder = StringBuilder::new()
@@ -322,14 +340,15 @@ test "single root node" {
     tree.print_root(builder)
     inspect(
       builder.to_string(),
-      content=
+      content=(
         #|src
         #|
-      ,
+      ),
     )
   })
 }
 
+///|
 test "tree with children" {
   @async.start(fn() {
     let builder = StringBuilder::new()
@@ -339,12 +358,12 @@ test "tree with children" {
     tree.print_root(builder)
     inspect(
       builder.to_string(),
-      content=
+      content=(
         #|src
         #|├── file1.txt
         #|└── file2.txt
         #|
-      ,
+      ),
     )
   })
 }
@@ -355,15 +374,14 @@ test "tree with children" {
 程序的入口应当定义为：
 
 ```moonbit x
+///|
 fn main {
-  try
   @async.start(fn() {
     let option = TreeOptions::default()
     parser.parse(option, @env.args[1:]) |> ignore
     let tree_node = TreeNode::new(option)
     tree_node.print_root(@async.stdout)
-  })
-  catch {
+  }) catch {
     e => println("Error: \{e}")
   }
 }
@@ -379,7 +397,8 @@ moon build
 moon run src -- -h
 ```
 
-```moonbit
+```moonbit nocheck
+///|
 test {
   @async.start(fn() {
     let option = TreeOptions::default()
@@ -389,12 +408,12 @@ test {
     tree_node.print_root(output)
     inspect(
       output.to_string(),
-      content=
+      content=(
         #|./src/tree
         #|├── CLI.mbt.md
         #|└── moon.pkg.json
         #|
-      ,
+      ),
     )
   })
 }

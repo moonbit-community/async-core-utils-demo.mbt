@@ -12,7 +12,7 @@ fn main {
   } catch {
     e => {
       println("Error running cat: \{e}")
-      try uv.close() catch {
+      uv.close() catch {
         _ => ()
       }
     }

@@ -1,0 +1,9 @@
+import {
+  "tonyfettes/uv",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)

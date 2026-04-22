@@ -8,17 +8,13 @@ fn main {
   }
   try {
     let args = @uv.args()
-    let path = if args.length() > 1 {
-      args[1]
-    } else {
-      @uv.cwd()
-    }
+    let path = if args.length() > 1 { args[1] } else { @uv.cwd() }
     ls(uv, path)
     uv.close()
   } catch {
     e => {
       println("Error running ls: \{e}")
-      try uv.close() catch {
+      uv.close() catch {
         _ => ()
       }
     }

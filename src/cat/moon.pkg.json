@@ -1,7 +1,0 @@
-{
-  "import": [
-    "tonyfettes/uv"
-  ],
-  "is-main": true,
-  "supported-targets": "native"
-}
