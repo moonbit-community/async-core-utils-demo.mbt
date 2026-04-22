@@ -1,7 +1,7 @@
 {
   "import": [
-    "tonyfettes/encoding",
-    "tonyfettes/uv/async"
+    "tonyfettes/uv"
   ],
-  "is-main": true
+  "is-main": true,
+  "supported-targets": "native"
 }

@@ -1,50 +1,50 @@
 ///|
 fn main {
-  @async.start(fn() { cat(@env.args()[1:]) }) catch {
-    e => println("Error running cat: \{e}")
+  let uv = @uv.Loop::new() catch {
+    e => {
+      println("Error initializing uv: \{e}")
+      return
+    }
+  }
+  try {
+    cat(uv, @uv.args()[1:])
+    uv.close()
+  } catch {
+    e => {
+      println("Error running cat: \{e}")
+      try uv.close() catch {
+        _ => ()
+      }
+    }
   }
 }
 
 ///|
-async fn cat(files : ArrayView[String]) -> Unit raise {
+fn cat(uv : @uv.Loop, files : ArrayView[Bytes]) -> Unit raise {
   if files is [] {
-    @async.stdin.read_streaming() // read from stdin only once
+    copy_file(uv, @uv.stdin())
   } else {
     for file in files {
-      if file is "-" {
-        @async.stdin.read_streaming() // read from stdin
-        continue
+      if file is b"-" {
+        copy_file(uv, @uv.stdin())
       } else {
-        @async.path(file).read_all()
+        let input = uv.fs_open_sync(file, @uv.OpenFlags::read_only(), 0o644)
+        copy_file(uv, input)
+        uv.fs_close_sync(input)
       }
     }
   }
 }
 
 ///|
-async fn &@async.ToPath::read_all(input : Self) -> Unit raise {
-  @async.stdout.write_text(input.read_text(encoding=UTF8), encoding=UTF8)
-}
-
-///|
-async fn @string.View::to_stdout(self : Self) -> Unit raise {
-  @async.stdout.write_text(self, encoding=UTF8)
-}
-
-///|
-async fn @async.File::read_streaming(input : Self) -> Unit raise {
-  let decoder = @encoding.decoder(UTF8)
-  let string : Array[@string.View] = []
-  let stream = input.read()
-  stream.each(fn(bytes) {
-    let str = decoder.decode(bytes, stream=true)
-    if str.find("\n") is Some(index) {
-      for s in string {
-        s.to_stdout()
-      }
-      str.charcodes(end=index + 1).to_stdout()
-      string.clear()
-      string.push(str.charcodes(start=index + 1))
+fn copy_file(uv : @uv.Loop, input : @uv.File) -> Unit raise {
+  let output = @uv.stdout()
+  let buffer = Bytes::make(8192, 0)
+  while true {
+    let count = uv.fs_read_sync(input, [buffer[:]])
+    if count == 0 {
+      break
     }
-  })
+    uv.fs_write_sync(output, [buffer[:count]])
+  }
 }

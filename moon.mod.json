@@ -8,6 +8,7 @@
     "tonyfettes/encoding": "0.3.9",
     "tonyfettes/c": "0.7.7"
   },
+  "preferred-target": "native",
   "readme": "README.md",
   "repository": "",
   "license": "Apache-2.0",
