@@ -1,6 +1,0 @@
-{
-  "import": [
-    "username/hello/lib",
-    "tonyfettes/uv"
-  ]
-}

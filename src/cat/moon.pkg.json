@@ -1,7 +1,0 @@
-{
-  "import": [
-    "tonyfettes/encoding",
-    "tonyfettes/uv/async"
-  ],
-  "is-main": true
-}
