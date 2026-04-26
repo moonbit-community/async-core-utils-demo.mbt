@@ -81,6 +81,7 @@ top/
 
 ```moonbit nocheck
 // 树节点结构
+
 ///|
 struct TreeNode {
   name : String
@@ -297,6 +298,7 @@ impl Output for @async.File with print(self, text) {
 
 ```moonbit nocheck
 // 用于根节点的打印函数
+
 ///|
 async fn[O : Output] TreeNode::print_root(node : TreeNode, output : O) -> Unit {
   output.print("\{node.name}\n")
